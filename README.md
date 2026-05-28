@@ -12,7 +12,7 @@
 ║   ┌────┐                                                     ║
 ║   │   ─┐    MediaHUD :: CrossPlatform Media Indicator        ║
 ║   │   ─┘    Designed & Engineered by Eymen ERDOĞDU           ║
-║   └────┘    [github.com/eymenerdogdu](https://github.com/eymenerdogdu)                          ║
+║   └────┘    github.com/eymenerdogdu                          ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
 </pre>
