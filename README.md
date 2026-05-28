@@ -5,7 +5,7 @@
   <img src="[https://img.shields.io/badge/Framework-PyQt5-green?style=flat-for-the-badge](https://img.shields.io/badge/Framework-PyQt5-green?style=flat-for-the-badge)" alt="PyQt5">
   <img src="[https://img.shields.io/badge/License-MIT-yellow?style=flat-for-the-badge](https://img.shields.io/badge/License-MIT-yellow?style=flat-for-the-badge)" alt="License">
 </p>
- text
+
 <pre>
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
