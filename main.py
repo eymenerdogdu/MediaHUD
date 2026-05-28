@@ -1,21 +1,21 @@
 import sys
 import os
 import platform
-from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QProgressBar, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QProgressBar, QSizePolicy, QSlider
 from PyQt5.QtCore import Qt, QTimer, QUrl
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
-"""
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║   ┌────┐                                                     ║
-║   │   ─┐    MediaHUD :: CrossPlatform Media Indicator        ║
-║   │   ─┘    Designed & Engineered by Eymen ERDOĞDU           ║
-║   └────┘    github.com/eymenerdogdu                          ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
-"""
+# ==============================================================================
+# ╔══════════════════════════════════════════════════════════════╗
+# ║                                                              ║
+# ║   ┌────┐                                                     ║
+# ║   │   ─┐    MediaHUD :: CrossPlatform Media Indicator        ║
+# ║   │   ─┘    Designed & Engineered by Eymen ERDOĞDU           ║
+# ║   └────┘    github.com/eymenerdogdu                          ║
+# ║                                                              ║
+# ╚══════════════════════════════════════════════════════════════╝
+# ==============================================================================
 
 SYSTEM = platform.system()
 
@@ -39,6 +39,7 @@ class MediaHUD(QWidget):
         self.setWindowTitle("MediaHUD")
         self.setStyleSheet("background: #202020; color: white; border-radius: 10px;")
         self.setFixedSize(380, 105)
+        self.setWindowOpacity(0.85)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(10, 10, 10, 8)
@@ -82,10 +83,22 @@ class MediaHUD(QWidget):
         right_stack.addWidget(self.info_label)
 
         controls_row = QHBoxLayout()
+        controls_row.setSpacing(8)
         
         self.time_label = QLabel("00:00 / 00:00")
         self.time_label.setStyleSheet("color: #ff5555; font-size: 9px; font-weight: bold;")
         controls_row.addWidget(self.time_label, alignment=Qt.AlignVCenter)
+        
+        self.volume_slider = QSlider(Qt.Horizontal)
+        self.volume_slider.setRange(0, 100)
+        self.volume_slider.setFixedWidth(70)
+        self.volume_slider.setStyleSheet("""
+            QSlider::groove:horizontal { background: #333; height: 4px; border-radius: 2px; }
+            QSlider::sub-page:horizontal { background: #ff5555; border-radius: 2px; }
+            QSlider::handle:horizontal { background: white; width: 8px; height: 8px; margin: -2px 0; border-radius: 4px; }
+        """)
+        self.volume_slider.valueChanged.connect(self.set_volume)
+        controls_row.addWidget(self.volume_slider, alignment=Qt.AlignVCenter)
         
         controls_row.addStretch(1)
         
@@ -125,6 +138,17 @@ class MediaHUD(QWidget):
         self.scroll_text = ""
         self.last_art = ""
 
+    def enterEvent(self, event): self.setWindowOpacity(1.0)
+    def leaveEvent(self, event): self.setWindowOpacity(0.85)
+
+    def apply_colors_from_pixmap(self, pixmap):
+        try:
+            img = pixmap.toImage().scaled(1, 1, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+            c = img.pixelColor(0, 0)
+            r, g, b = c.red() // 2, c.green() // 2, c.blue() // 2
+            self.setStyleSheet(f"background: rgb({r},{g},{b}); color: white; border-radius: 10px;")
+        except: pass
+
     def update_ui(self):
         if SYSTEM == "Linux":
             self.update_linux()
@@ -142,6 +166,17 @@ class MediaHUD(QWidget):
         except: pass
         return None
 
+    def set_volume(self, value):
+        if SYSTEM == "Linux":
+            player = self.get_player_bus()
+            if player:
+                try:
+                    bus = dbus.SessionBus()
+                    proxy = bus.get_object(player, '/org/mpris/MediaPlayer2')
+                    iface = dbus.Interface(proxy, 'org.freedesktop.DBus.Properties')
+                    iface.Set('org.mpris.MediaPlayer2.Player', 'Volume', value / 100.0)
+                except: pass
+
     def update_linux(self):
         player = self.get_player_bus()
         if not player: return
@@ -151,7 +186,11 @@ class MediaHUD(QWidget):
             props = dbus.Interface(proxy, 'org.freedesktop.DBus.Properties')
             meta = props.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
             pos = props.Get('org.mpris.MediaPlayer2.Player', 'Position')
+            vol = props.Get('org.mpris.MediaPlayer2.Player', 'Volume')
             
+            if not self.volume_slider.isSliderDown():
+                self.volume_slider.setValue(int(vol * 100))
+                
             status = str(props.Get('org.mpris.MediaPlayer2.Player', 'PlaybackStatus'))
             self.btn_play.setText("⏸" if status == "Playing" else "▶")
             
@@ -168,7 +207,11 @@ class MediaHUD(QWidget):
                 if art_url.startswith("file://"):
                     pixmap = QPixmap(art_url.replace("file://", ""))
                     self.art_label.setPixmap(pixmap.scaled(60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                    self.apply_colors_from_pixmap(pixmap)
                 else:
+                    if "open.spotify.com/image/" in art_url:
+                        img_id = art_url.split("/image/")[-1]
+                        art_url = f"https://i.scdn.co/image/{img_id}"
                     self.manager.get(QNetworkRequest(QUrl(art_url)))
         except: pass
 
@@ -186,14 +229,9 @@ class MediaHUD(QWidget):
                 thumb_pixmap = None
                 if info.thumbnail:
                     stream = await info.thumbnail.open_read_async()
-                    reader = DataReader(stream.get_input_streamAt(0))
+                    reader = DataReader(stream.get_input_stream_at(0))
                     await reader.load_async(stream.size)
                     buffer = reader.read_buffer(stream.size)
-                    
-                    import ctypes
-                    from winrt._winrt import DataWriter
-                    writer = DataWriter()
-                    writer.write_buffer(buffer)
                     
                     data = bytearray(stream.size)
                     reader.seek(0)
@@ -219,10 +257,10 @@ class MediaHUD(QWidget):
             if res:
                 self.btn_play.setText("⏸" if res["status"] == 4 else "▶")
                 self.handle_text_and_time(res["title"], res["artist"], res["album"], res["pos"], res["length"])
-                if res["pixmap"]:
+                if res["pixmap"] and not res["pixmap"].isNull():
                     self.art_label.setPixmap(res["pixmap"].scaled(60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        except Exception as e:
-            pass
+                    self.apply_colors_from_pixmap(res["pixmap"])
+        except: pass
 
     def handle_text_and_time(self, title, artist, album, pos, length):
         if title != self.current_title:
@@ -250,7 +288,7 @@ class MediaHUD(QWidget):
                 try:
                     bus = dbus.SessionBus()
                     proxy = bus.get_object(player, '/org/mpris/MediaPlayer2')
-                    getattr(dbus.Interface(proxy, 'org.mpris.MediaPlayer2.Player'), cmd)()
+                    getattr(dbus.Interface(proxy, 'org.freedesktop.DBus.Player'), cmd)()
                 except: pass
         elif SYSTEM == "Windows":
             try:
@@ -270,7 +308,9 @@ class MediaHUD(QWidget):
         if reply.error() == QNetworkReply.NoError:
             pixmap = QPixmap()
             pixmap.loadFromData(reply.readAll())
-            self.art_label.setPixmap(pixmap.scaled(60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            if not pixmap.isNull():
+                self.art_label.setPixmap(pixmap.scaled(60, 60, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                self.apply_colors_from_pixmap(pixmap)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
