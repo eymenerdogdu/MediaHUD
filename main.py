@@ -288,7 +288,7 @@ class MediaHUD(QWidget):
                 try:
                     bus = dbus.SessionBus()
                     proxy = bus.get_object(player, '/org/mpris/MediaPlayer2')
-                    getattr(dbus.Interface(proxy, 'org.freedesktop.DBus.Player'), cmd)()
+                    getattr(dbus.Interface(proxy, 'org.mpris.MediaPlayer2.Player'), cmd)()
                 except: pass
         elif SYSTEM == "Windows":
             try:
