@@ -5,7 +5,8 @@
   <img src="[https://img.shields.io/badge/Framework-PyQt5-green?style=flat-for-the-badge](https://img.shields.io/badge/Framework-PyQt5-green?style=flat-for-the-badge)" alt="PyQt5">
   <img src="[https://img.shields.io/badge/License-MIT-yellow?style=flat-for-the-badge](https://img.shields.io/badge/License-MIT-yellow?style=flat-for-the-badge)" alt="License">
 </p>
- ```
+ text
+<pre>
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
 ║   ┌────┐                                                     ║
@@ -14,7 +15,7 @@
 ║   └────┘    [github.com/eymenerdogdu](https://github.com/eymenerdogdu)                          ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
- ```
+</pre>
 
 **MediaHUD** is a lightweight, frameless, and modern **cross-platform media indicator** that hooks into your operating system's native APIs to monitor background audio and media playback. It does not play audio files natively; instead, it acts as a sleek HUD panel and remote proxy to display and control status from active system media players.
 
